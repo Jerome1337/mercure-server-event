@@ -5,26 +5,41 @@
 </template>
 
 <script>
+  let mercureHub;
+
+  /* eslint-disable */
   export default {
-    name: 'HelloWorld',
+    name: 'default',
     data() {
       return {
         serverData: null,
       };
     },
-    created() {
-      this.getData();
+    mounted() {
+      this.$sse('http://localhost:9000/hub?topic=http://localhost:9000/demo/server/1.jsonld', {
+        format: 'json',
+      }).then(
+        sse => {
+          console.log(sse);
+          mercureHub = sse;
+
+          sse.onError(e => {
+            console.error('lost connection; giving up!', e);
+            sse.close();
+          });
+
+
+          sse.subscribe('', message => {
+            console.log('message' + message);
+            this.serverData = message
+          });
+        },
+      ).catch(err => {
+        console.error('Failed to connect to server', err);
+      });
     },
-    methods: {
-      getData() {
-        const url = new URL('http://mercure/hub');
-
-        url.searchParams.append('topic', 'http://mercure/demo/books/1.jsonld');
-
-        const eventSource = new EventSource(url);
-
-        eventSource.onmessage = message => this.serverData = message;
-      },
+    beforeDestroy() {
+      mercureHub.close();
     },
   };
 </script>
